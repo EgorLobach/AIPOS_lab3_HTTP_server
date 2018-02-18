@@ -44,6 +44,7 @@ public class HTTPServer extends Thread{
                 httpResponse.addHeader("Content-Type", "text/html");
                 httpResponse.setCode(200);
                 httpResponse.setExplanation("OK");
+                httpResponse.setLastModificationDate(new Date(file.lastModified()));
             }
             else {
                 byte[] buffer = new byte[(int) file.length()];
@@ -54,6 +55,7 @@ public class HTTPServer extends Thread{
                     String data = new String(buffer);
                     httpResponse.setCurrentDate(new Date());
                     httpResponse.setData(data);
+                    httpResponse.setLastModificationDate(new Date(file.lastModified()));
                     httpResponse.setDataFlag(true);
                     httpResponse.addHeader("Content-Type", HTTPUtil.getHttpContentType(file.getName()));
                     httpResponse.setCode(200);
@@ -79,9 +81,11 @@ public class HTTPServer extends Thread{
         }
         else{
             httpResponse.setCurrentDate(new Date());
+            httpResponse.setLastModificationDate(new Date(file.lastModified()));
             httpResponse.addHeader("Content-Length", "" + file.length());
             httpResponse.addHeader("Content-Type", HTTPUtil.getHttpContentType(file.getName()));
             httpResponse.setCode(200);
+            httpResponse.setExplanation("OK");
         }
         return httpResponse;
     }
@@ -119,7 +123,7 @@ public class HTTPServer extends Thread{
                 httpResponse.setExplanation("Method not allowed");
         }
 
-        byte[] buffer;
+        byte[] buffer = null;
         String response = httpResponse.formResponse();
         listener.update(response);
 
