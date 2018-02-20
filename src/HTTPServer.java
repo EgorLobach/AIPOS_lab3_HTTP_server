@@ -104,6 +104,9 @@ public class HTTPServer implements Runnable {
             httpResponse.setCode(200);
             httpResponse.setExplanation("OK");
             httpResponse.addHeader("Content-Length", "" + 0);
+            httpResponse.setCurrentDate(new Date());
+            httpResponse.setLastModificationDate(new Date(file.lastModified()));
+            httpResponse.setDataFlag(true);
             try {
                 FileOutputStream fos = new FileOutputStream(rootPath + "/lastPost.txt");
                 httpResponse.addHeader("Location", "/lastPost.txt");

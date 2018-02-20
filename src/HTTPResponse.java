@@ -11,7 +11,7 @@ public class HTTPResponse {
     private Date currentDate;
     private Date lastModificationDate;
     private String explanation;
-    private String data;
+    private String data = "";
     private HashMap<String, String> headers;
 
     HTTPResponse() {
@@ -50,7 +50,7 @@ public class HTTPResponse {
         response += HTTP_VERSION + " " + code + " " + explanation + CRLF;
         for (String key : headers.keySet())
             response += key + ": " + headers.get(key) + CRLF;
-        if (data != null) {
+        if (data.equals("")) {
             response += CRLF;
             response += data;
         }
