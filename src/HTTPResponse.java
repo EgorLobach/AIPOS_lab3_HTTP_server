@@ -3,7 +3,7 @@ import java.util.HashMap;
 
 public class HTTPResponse {
 
-    private static final String CRLF = "\r\n";
+    static final String CRLF = "\r\n";
     private static final String HTTP_VERSION = "HTTP/1.1";
 
     private boolean dataFlag;
@@ -50,8 +50,10 @@ public class HTTPResponse {
         response += HTTP_VERSION + " " + code + " " + explanation + CRLF;
         for (String key : headers.keySet())
             response += key + ": " + headers.get(key) + CRLF;
-        response += CRLF;
-        response += data;
+        if (data != null) {
+            response += CRLF;
+            response += data;
+        }
         return response;
     }
 

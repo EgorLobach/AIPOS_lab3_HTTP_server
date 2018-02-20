@@ -1,3 +1,5 @@
+package util;
+
 public class HTTPUtil {
     public static String getHttpContentType(String filename){
         String ext = filename.substring(filename.indexOf('.')+1, filename.length());
