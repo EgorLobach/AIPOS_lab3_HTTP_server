@@ -28,5 +28,6 @@ public class Frame implements Subscriber {
     @Override
     public void update(String str) {
         buffer.append(str);
+        buffer.setCaretPosition(buffer.getDocument().getLength());
     }
 }

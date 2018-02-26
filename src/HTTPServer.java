@@ -3,68 +3,64 @@ import view.Subscriber;
 
 import java.io.*;
 import java.net.Socket;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
+import java.util.TimeZone;
 
 public class HTTPServer implements Runnable {
     private Socket clientSocket = null;
     private String rootPath = System.getProperty("user.dir");
     private Subscriber listener;
+    private DateFormat dateFormat;
 
     HTTPServer(Socket clientSocket, Subscriber listener) {
         this.clientSocket = clientSocket;
         this.listener = listener;
+        dateFormat = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss zzz", Locale.US);
+        dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
     }
 
     private HTTPResponse GET(HTTPRequest httpRequest) {
         HTTPResponse httpResponse = new HTTPResponse();
         File file = new File(rootPath + httpRequest.getPath());
-        if (file.exists()) {
-            if (file.isDirectory()) {
-                String fileList = "<!DOCTYPE html>" +
-                        "<head>" +
-                        "<meta charset='UTF-8'>" +
-                        "</head" +
-                        "<body>" +
-                        "<a href='..'" + "'>" + file.getAbsolutePath() + "</a><br>";
-                httpResponse.setDataFlag(false);
-                for (File f : file.listFiles()) {
-                    try {
-                        fileList = fileList + "<a href='" + f.getAbsolutePath().replace(rootPath, "") + "'>" + f.getCanonicalPath() + "</a><br>";
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-                fileList = fileList + "</body></html>";
-                httpResponse.setCurrentDate(new Date());
-                httpResponse.setData(fileList);
-                httpResponse.addHeader("Content-Type", "text/html");
+        if (!file.exists())
+            fileNotFound(httpResponse, file);
+        else {
+            try {
+                httpResponse.addHeader("Last-modified", "" + dateFormat.format(new Date(file.lastModified())));
+                httpResponse.addHeader("Date", "" + dateFormat.format(new Date()));
                 httpResponse.setCode(200);
                 httpResponse.setExplanation("OK");
-                httpResponse.setLastModificationDate(new Date(file.lastModified()));
-            } else {
-                byte[] buffer = new byte[(int) file.length()];
-                try {
+                httpResponse.setDataFlag(true);
+                if (file.isDirectory()) {
+                    String fileList = "<!DOCTYPE html><head><meta charset='UTF-8'>" +
+                            "</head><body><a href='..'" + "'>" + file.getAbsolutePath() + "</a><br>";
+                    for (File f : file.listFiles()) {
+                        try {
+                            fileList += "<a href='" + f.getAbsolutePath().replace(rootPath, "") + "'>" + f.getCanonicalPath() + "</a><br>";
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    fileList += "</body></html>";
+                    httpResponse.setData(fileList);
+                    httpResponse.addHeader("Content-Type", "text/html");
+                } else {
+                    byte[] buffer = new byte[(int) file.length()];
                     InputStream fis = new FileInputStream(file);
                     fis.read(buffer);
                     fis.close();
                     String data = new String(buffer);
-                    httpResponse.setCurrentDate(new Date());
                     httpResponse.setData(data);
-                    httpResponse.setLastModificationDate(new Date(file.lastModified()));
-                    httpResponse.setDataFlag(true);
                     httpResponse.addHeader("Content-Type", HTTPUtil.getHttpContentType(file.getName()));
-                    httpResponse.setCode(200);
-                    httpResponse.setExplanation("OK");
-                } catch (Exception exc) {
-                    httpResponse.setCode(500);
-                    httpResponse.setDataFlag(false);
-                    httpResponse.setExplanation("Inner server error");
                 }
+            } catch (Exception exc) {
+                httpResponse.setCode(500);
+                httpResponse.setDataFlag(false);
+                httpResponse.setExplanation("Inner server error");
             }
-        } else {
-            httpResponse.setData("");
-            httpResponse.setCode(404);
-            httpResponse.setExplanation("Not found");
         }
         return httpResponse;
     }
@@ -73,9 +69,7 @@ public class HTTPServer implements Runnable {
         HTTPResponse httpResponse = new HTTPResponse();
         File file = new File(rootPath + httpRequest.getPath());
         if (!file.exists()) {
-            httpResponse.setCode(404);
-            httpResponse.setExplanation("Not found");
-            httpResponse.setCurrentDate(new Date());
+            fileNotFound(httpResponse, file);
         } else {
             if (file.isDirectory()) {
                 httpResponse.addHeader("Content-Type", "text/html");
@@ -83,9 +77,11 @@ public class HTTPServer implements Runnable {
                 httpResponse.addHeader("Content-Type", HTTPUtil.getHttpContentType(file.getName()));
             }
             try {
-                httpResponse.setCurrentDate(new Date());
-                httpResponse.setLastModificationDate(new Date(file.lastModified()));
-                httpResponse.setDataFlag(true);
+                httpResponse.addHeader("Content-Length", "" + 0);
+                httpResponse.addHeader("Last-modified", "" + dateFormat.format(new Date(file.lastModified())));
+                httpResponse.addHeader("Date", "" + dateFormat.format(new Date()));
+
+                httpResponse.setDataFlag(false);
                 httpResponse.setCode(200);
                 httpResponse.setExplanation("OK");
             } catch (Exception exc) {
@@ -100,29 +96,24 @@ public class HTTPServer implements Runnable {
     private HTTPResponse POST(HTTPRequest httpRequest) {
         HTTPResponse httpResponse = new HTTPResponse();
         File file = new File(rootPath + httpRequest.getPath());
-        if(file.exists()) {
+        if (file.exists()) {
             httpResponse.setCode(200);
             httpResponse.setExplanation("OK");
             httpResponse.addHeader("Content-Length", "" + 0);
-            httpResponse.setCurrentDate(new Date());
-            httpResponse.setLastModificationDate(new Date(file.lastModified()));
-            httpResponse.setDataFlag(true);
+            httpResponse.addHeader("Date", "" + dateFormat.format(new Date()));
+            httpResponse.setDataFlag(false);
             try {
                 FileOutputStream fos = new FileOutputStream(rootPath + "/lastPost.txt");
                 httpResponse.addHeader("Location", "/lastPost.txt");
                 fos.write(httpRequest.getData().getBytes());
                 fos.close();
-            }
-            catch (Exception exc){
+            } catch (Exception exc) {
                 httpResponse.setCode(500);
                 httpResponse.setExplanation("Inner server error");
             }
+        } else {
+            fileNotFound(httpResponse, file);
         }
-        else{
-            httpResponse.setCode(404);
-            httpResponse.setExplanation("Not found");
-        }
-
         return httpResponse;
     }
 
@@ -158,7 +149,8 @@ public class HTTPServer implements Runnable {
             byte[] dataBuffer = new byte[(int) file.length()];
             try {
                 (new FileInputStream(file)).read(dataBuffer);
-            } catch (Exception exc) {
+            } catch (IOException e) {
+                e.printStackTrace();
             }
             int i;
             for (i = 0; i < response.length(); i++) {
@@ -180,7 +172,6 @@ public class HTTPServer implements Runnable {
         }
     }
 
-
     @Override
     public void run() {
         String request;
@@ -199,5 +190,16 @@ public class HTTPServer implements Runnable {
         } catch (Exception exc) {
             System.err.println(exc.getMessage());
         }
+    }
+
+    private void fileNotFound(HTTPResponse httpResponse, File file) {
+        httpResponse.setCode(404);
+        httpResponse.setExplanation("Not Found");
+        httpResponse.addHeader("Content-Type", "text/html");
+        httpResponse.addHeader("Date", "" + new Date());
+        httpResponse.setDataFlag(true);
+        String fileList = "<HTML><HEAD><TITLE>File Not Found</TITLE>" +
+                "</HEAD><BODY><H2>404 File Not Found: " + file + "</H2></BODY></HTML>";
+        httpResponse.setData(fileList);
     }
 }
