@@ -53,4 +53,7 @@ public class HTTPResponse {
     public boolean getDataFlag() {
         return dataFlag;
     }
+    public String getLocation(){
+        return headers.get("Location");
+    }
 }
