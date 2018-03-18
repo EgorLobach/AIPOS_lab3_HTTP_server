@@ -3,13 +3,9 @@ import view.Subscriber;
 
 import java.io.*;
 import java.net.Socket;
-import java.nio.file.Path;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
-import java.util.Scanner;
-import java.util.TimeZone;
+import java.util.*;
 
 public class HTTPServer implements Runnable {
     private Socket clientSocket = null;
@@ -207,7 +203,7 @@ public class HTTPServer implements Runnable {
                 httpResponse.addHeader("Date", "" + dateFormat.format(new Date()));
                 httpResponse.setDataFlag(false);
             }
-            else if(isInFile(httpRequest.getPath(), "temp4.txt")){
+            else if(isInFile(httpRequest.getPath(), "temp4.txt")&&!isAuthorized(httpRequest)){
                 httpResponse.setCode(403);
                 httpResponse.setExplanation("Forbidden");
                 httpResponse.addHeader("Content-Length", "" + 0);
@@ -346,8 +342,24 @@ public class HTTPServer implements Runnable {
     private boolean isAuthorized(HTTPRequest httpRequest){
         if (httpRequest.getHeaders().get("Authorization")==null)
             return false;
-        return true;
+        Scanner scanner = null;
+        try {
+            scanner = new Scanner(new File("dataBase.txt"));
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+        String str = httpRequest.getLoginAndPassword();
+        while(scanner.hasNext()) {
+            String line = scanner.nextLine();
+            byte[] bytes = Base64.getDecoder().decode(str);
+            String temp = new String(bytes);
+            if(line.equals(temp)){
+               return true;
+            }
+        }
+        return false;
     }
+
     private boolean isInFile(String path, String filePath){
         Scanner scanner = null;
         try {

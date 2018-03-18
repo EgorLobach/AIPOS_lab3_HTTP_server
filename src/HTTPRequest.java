@@ -21,6 +21,13 @@ public class HTTPRequest {
 
     }
 
+    public String getLoginAndPassword(){
+        String[] str = headers.get("Authorization").split(" ");
+        if(str[0].equals("Basic"))
+            return str[1];
+        else return "";
+    }
+
     public String getHttpVersion() {
         return httpVersion;
     }
@@ -58,10 +65,6 @@ public class HTTPRequest {
         return headers;
     }
 
-    public boolean correct(){
-
-        return true;
-    }
     public boolean isCorrect(){
         Headers headersValue = new Headers();
         for (String key: headers.keySet())

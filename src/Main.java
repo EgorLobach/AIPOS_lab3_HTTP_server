@@ -9,7 +9,7 @@ import java.net.UnknownHostException;
 
 public class Main {
     public static void main(String[] args) {
-        view.Frame frame = new Frame("HTTP server", new Dimension(700, 500));
+        view.Frame frame = new Frame("HTTP server", new Dimension(700, 800));
         try {
             ServerSocket serverSocket = new ServerSocket(8800, 0, InetAddress.getByName("localhost"));
             while (true){
